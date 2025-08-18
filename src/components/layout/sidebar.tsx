@@ -11,6 +11,7 @@ import {
   LightBulbIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
+  CloudArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/auth-context';
 
@@ -20,6 +21,7 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   { name: 'Alerts', href: '/alerts', icon: ExclamationTriangleIcon },
   { name: 'Insights', href: '/insights', icon: LightBulbIcon },
+  { name: 'Data Import', href: '/data-import', icon: CloudArrowUpIcon },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];
 
