@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { createClientSupabase } from '@/lib/supabase';
+import { createClientSupabase } from '@/lib/supabase-client';
 import { useAuth } from '@/lib/auth-context';
 
 interface ImportResult {

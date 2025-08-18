@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, AuthError, Session } from '@supabase/supabase-js';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from './supabase';
+import type { Database } from './types/database';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
 
