@@ -6,6 +6,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+    
     const supabase = createServerSupabase();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -38,6 +42,10 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+    
     const supabase = createServerSupabase();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -98,6 +106,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+    
     const supabase = createServerSupabase();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();

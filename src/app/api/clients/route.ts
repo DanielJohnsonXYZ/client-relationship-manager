@@ -3,6 +3,10 @@ import { createServerSupabase } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+    
     const supabase = createServerSupabase();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -43,6 +47,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+    
     const supabase = createServerSupabase();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
