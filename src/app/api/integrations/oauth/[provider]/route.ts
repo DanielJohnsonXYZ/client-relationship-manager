@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase } from '@/lib/supabase-server';
+import { createServerSupabase, supabaseAdmin } from '@/lib/supabase-server';
 
 // Handle API key based integrations
 async function handleApiKeyIntegration(provider: string, config: any) {
@@ -15,8 +15,8 @@ async function handleApiKeyIntegration(provider: string, config: any) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=api_key_missing`);
     }
 
-    // Find the integration
-    const { data: integration, error: integrationError } = await supabase
+    // Find the integration using admin client to bypass RLS
+    const { data: integration, error: integrationError } = await supabaseAdmin
       .from('integrations')
       .select('id')
       .eq('user_id', user.id)
@@ -27,8 +27,8 @@ async function handleApiKeyIntegration(provider: string, config: any) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=integration_not_found`);
     }
 
-    // Store API key as access token
-    const { error: tokenError } = await supabase
+    // Store API key as access token using admin client
+    const { error: tokenError } = await supabaseAdmin
       .from('integration_tokens')
       .upsert({
         integration_id: integration.id,
@@ -42,8 +42,8 @@ async function handleApiKeyIntegration(provider: string, config: any) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=token_storage_failed`);
     }
 
-    // Update integration status
-    await supabase
+    // Update integration status using admin client
+    await supabaseAdmin
       .from('integrations')
       .update({ 
         status: 'active',
@@ -192,8 +192,8 @@ export async function GET(
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/login`);
     }
 
-    // Store tokens securely
-    const { data: integration, error: integrationError } = await supabase
+    // Store tokens securely - use admin client to bypass RLS
+    const { data: integration, error: integrationError } = await supabaseAdmin
       .from('integrations')
       .select('id')
       .eq('user_id', user.id)
@@ -204,8 +204,8 @@ export async function GET(
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=integration_not_found`);
     }
 
-    // Store tokens
-    const { error: tokenError } = await supabase
+    // Store tokens using admin client
+    const { error: tokenError } = await supabaseAdmin
       .from('integration_tokens')
       .upsert({
         integration_id: integration.id,
@@ -221,8 +221,8 @@ export async function GET(
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=token_storage_failed`);
     }
 
-    // Update integration status
-    await supabase
+    // Update integration status using admin client
+    await supabaseAdmin
       .from('integrations')
       .update({ 
         status: 'active',
