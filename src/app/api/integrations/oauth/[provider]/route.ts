@@ -1,6 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
 
+// Handle API key based integrations
+async function handleApiKeyIntegration(provider: string, config: any) {
+  try {
+    const supabase = createServerSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/login`);
+    }
+
+    if (!config.clientId) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=api_key_missing`);
+    }
+
+    // Find the integration
+    const { data: integration, error: integrationError } = await supabase
+      .from('integrations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('type', provider)
+      .single();
+
+    if (integrationError || !integration) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=integration_not_found`);
+    }
+
+    // Store API key as access token
+    const { error: tokenError } = await supabase
+      .from('integration_tokens')
+      .upsert({
+        integration_id: integration.id,
+        access_token: config.clientId, // API key stored as access token
+        refresh_token: null,
+        expires_at: null, // API keys don't expire
+        scope: config.scopes,
+      });
+
+    if (tokenError) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=token_storage_failed`);
+    }
+
+    // Update integration status
+    await supabase
+      .from('integrations')
+      .update({ 
+        status: 'active',
+        last_sync: new Date().toISOString()
+      })
+      .eq('id', integration.id);
+
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_success=${provider}`);
+  } catch (error) {
+    console.error('API key integration error:', error);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=unexpected_error`);
+  }
+}
+
 // OAuth configuration for different providers
 const OAUTH_CONFIGS = {
   gmail: {
@@ -22,11 +79,11 @@ const OAUTH_CONFIGS = {
     clientSecret: process.env.LOOM_CLIENT_SECRET,
   },
   fireflies: {
-    authUrl: 'https://fireflies.ai/oauth/authorize',
-    tokenUrl: 'https://fireflies.ai/oauth/token',
+    authUrl: null, // API key based, no OAuth
+    tokenUrl: null,
     scopes: ['read:meetings', 'read:transcripts'],
-    clientId: process.env.FIREFLIES_CLIENT_ID,
-    clientSecret: process.env.FIREFLIES_CLIENT_SECRET,
+    clientId: process.env.FIREFLIES_API_KEY,
+    clientSecret: null,
   },
   zoom: {
     authUrl: 'https://zoom.us/oauth/authorize',
@@ -53,6 +110,11 @@ export async function GET(
     const config = OAUTH_CONFIGS[provider];
 
     if (action === 'authorize') {
+      // Special handling for API key based integrations (like Fireflies)
+      if (!config.authUrl) {
+        return handleApiKeyIntegration(provider, config);
+      }
+
       // Step 1: Redirect to OAuth provider
       const state = crypto.randomUUID();
       const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/oauth/${provider}`;
