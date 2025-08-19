@@ -1,0 +1,163 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabase } from '@/lib/supabase-server';
+
+// OAuth configuration for different providers
+const OAUTH_CONFIGS = {
+  gmail: {
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    scopes: [
+      'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ],
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  },
+  loom: {
+    authUrl: 'https://www.loom.com/oauth/authorize',
+    tokenUrl: 'https://www.loom.com/api/oauth/token',
+    scopes: ['read:videos', 'read:workspace'],
+    clientId: process.env.LOOM_CLIENT_ID,
+    clientSecret: process.env.LOOM_CLIENT_SECRET,
+  },
+  fireflies: {
+    authUrl: 'https://fireflies.ai/oauth/authorize',
+    tokenUrl: 'https://fireflies.ai/oauth/token',
+    scopes: ['read:meetings', 'read:transcripts'],
+    clientId: process.env.FIREFLIES_CLIENT_ID,
+    clientSecret: process.env.FIREFLIES_CLIENT_SECRET,
+  },
+  zoom: {
+    authUrl: 'https://zoom.us/oauth/authorize',
+    tokenUrl: 'https://zoom.us/oauth/token',
+    scopes: ['meeting:read', 'recording:read', 'user:read'],
+    clientId: process.env.ZOOM_CLIENT_ID,
+    clientSecret: process.env.ZOOM_CLIENT_SECRET,
+  },
+};
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { provider: string } }
+) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action');
+    const provider = params.provider as keyof typeof OAUTH_CONFIGS;
+
+    if (!OAUTH_CONFIGS[provider]) {
+      return NextResponse.json({ error: 'Unsupported provider' }, { status: 400 });
+    }
+
+    const config = OAUTH_CONFIGS[provider];
+
+    if (action === 'authorize') {
+      // Step 1: Redirect to OAuth provider
+      const state = crypto.randomUUID();
+      const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/oauth/${provider}`;
+      
+      const authUrl = new URL(config.authUrl);
+      authUrl.searchParams.set('client_id', config.clientId!);
+      authUrl.searchParams.set('redirect_uri', redirectUri);
+      authUrl.searchParams.set('response_type', 'code');
+      authUrl.searchParams.set('scope', config.scopes.join(' '));
+      authUrl.searchParams.set('state', state);
+      authUrl.searchParams.set('access_type', 'offline'); // For refresh tokens
+
+      // Store state in session or database for validation
+      return NextResponse.redirect(authUrl.toString());
+    }
+
+    // Step 2: Handle OAuth callback
+    const code = searchParams.get('code');
+    const state = searchParams.get('state');
+    const error = searchParams.get('error');
+
+    if (error) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=${error}`);
+    }
+
+    if (!code) {
+      return NextResponse.json({ error: 'Authorization code not provided' }, { status: 400 });
+    }
+
+    // Exchange code for tokens
+    const tokenResponse = await fetch(config.tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: config.clientId!,
+        client_secret: config.clientSecret!,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/oauth/${provider}`,
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=token_exchange_failed`);
+    }
+
+    const tokens = await tokenResponse.json();
+
+    // Get user info to identify the integration
+    const supabase = createServerSupabase();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/login`);
+    }
+
+    // Store tokens securely
+    const { data: integration, error: integrationError } = await supabase
+      .from('integrations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('type', provider)
+      .single();
+
+    if (integrationError || !integration) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=integration_not_found`);
+    }
+
+    // Store tokens
+    const { error: tokenError } = await supabase
+      .from('integration_tokens')
+      .upsert({
+        integration_id: integration.id,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expires_at: tokens.expires_in 
+          ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+          : null,
+        scope: config.scopes,
+      });
+
+    if (tokenError) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=token_storage_failed`);
+    }
+
+    // Update integration status
+    await supabase
+      .from('integrations')
+      .update({ 
+        status: 'active',
+        last_sync: new Date().toISOString()
+      })
+      .eq('id', integration.id);
+
+    // Trigger initial sync
+    await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/${integration.id}/sync`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${tokens.access_token}` }
+    });
+
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_success=${provider}`);
+  } catch (error) {
+    console.error('OAuth error:', error);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=unexpected_error`);
+  }
+}

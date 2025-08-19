@@ -1,95 +1,164 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   EnvelopeIcon,
   ChatBubbleLeftRightIcon,
   VideoCameraIcon,
   CalendarIcon,
-  CreditCardIcon
+  CreditCardIcon,
+  FilmIcon,
+  MicrophoneIcon,
 } from '@heroicons/react/24/outline';
+import { createClientSupabase } from '@/lib/supabase-client';
 
 interface Integration {
   id: string;
+  type: string;
   name: string;
   description: string;
   icon: any;
-  status: 'connected' | 'disconnected' | 'error';
+  status: 'active' | 'inactive' | 'error';
   last_sync?: string;
+  created_at?: string;
 }
 
-export function IntegrationSettings() {
-  const [integrations, setIntegrations] = useState<Integration[]>([
-    {
-      id: 'gmail',
-      name: 'Gmail',
-      description: 'Sync email communications and analyze sentiment',
-      icon: EnvelopeIcon,
-      status: 'disconnected',
-    },
-    {
-      id: 'slack',
-      name: 'Slack',
-      description: 'Monitor client communications in Slack channels',
-      icon: ChatBubbleLeftRightIcon,
-      status: 'disconnected',
-    },
-    {
-      id: 'zoom',
-      name: 'Zoom',
-      description: 'Track meeting frequency and outcomes',
-      icon: VideoCameraIcon,
-      status: 'disconnected',
-    },
-    {
-      id: 'calendly',
-      name: 'Calendly',
-      description: 'Sync scheduled meetings and client interactions',
-      icon: CalendarIcon,
-      status: 'disconnected',
-    },
-    {
-      id: 'stripe',
-      name: 'Stripe',
-      description: 'Monitor payment status and revenue data',
-      icon: CreditCardIcon,
-      status: 'disconnected',
-    },
-  ]);
+const AVAILABLE_INTEGRATIONS = [
+  {
+    type: 'gmail',
+    name: 'Gmail',
+    description: 'Sync email communications and analyze sentiment',
+    icon: EnvelopeIcon,
+  },
+  {
+    type: 'loom',
+    name: 'Loom',
+    description: 'Import video recordings and transcripts from meetings',
+    icon: FilmIcon,
+  },
+  {
+    type: 'fireflies',
+    name: 'Fireflies.ai',
+    description: 'Sync meeting transcripts and call summaries',
+    icon: MicrophoneIcon,
+  },
+  {
+    type: 'zoom',
+    name: 'Zoom',
+    description: 'Track meeting frequency and outcomes',
+    icon: VideoCameraIcon,
+  },
+  {
+    type: 'slack',
+    name: 'Slack',
+    description: 'Monitor client communications in Slack channels',
+    icon: ChatBubbleLeftRightIcon,
+  },
+  {
+    type: 'calendly',
+    name: 'Calendly',
+    description: 'Sync scheduled meetings and client interactions',
+    icon: CalendarIcon,
+  },
+];
 
-  const handleConnect = async (integrationId: string) => {
-    // Mock connection process
-    setIntegrations(prev =>
-      prev.map(integration =>
-        integration.id === integrationId
-          ? { 
-              ...integration, 
-              status: 'connected',
-              last_sync: new Date().toISOString()
-            }
-          : integration
-      )
-    );
+export function IntegrationSettings() {
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [connecting, setConnecting] = useState<string | null>(null);
+  const supabase = createClientSupabase();
+
+  useEffect(() => {
+    fetchIntegrations();
+  }, []);
+
+  const fetchIntegrations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('integrations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Merge with available integrations to show all options
+      const mergedIntegrations = AVAILABLE_INTEGRATIONS.map(available => {
+        const existing = data?.find(d => d.type === available.type);
+        return existing ? { ...existing, ...available } : { ...available, status: 'inactive' as const };
+      });
+
+      setIntegrations(mergedIntegrations);
+    } catch (error) {
+      console.error('Error fetching integrations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConnect = async (integrationType: string) => {
+    setConnecting(integrationType);
+    
+    try {
+      // First create the integration record
+      const availableIntegration = AVAILABLE_INTEGRATIONS.find(a => a.type === integrationType);
+      if (!availableIntegration) return;
+
+      const { data: integration, error } = await supabase
+        .from('integrations')
+        .insert({
+          type: integrationType,
+          name: availableIntegration.name,
+          status: 'inactive'
+        })
+        .select()
+        .single();
+
+      if (error && error.code !== '23505') { // Ignore duplicate key error
+        throw error;
+      }
+
+      // Redirect to OAuth flow
+      window.location.href = `/api/integrations/oauth/${integrationType}?action=authorize`;
+    } catch (error) {
+      console.error('Error connecting integration:', error);
+    } finally {
+      setConnecting(null);
+    }
   };
 
   const handleDisconnect = async (integrationId: string) => {
-    setIntegrations(prev =>
-      prev.map(integration =>
-        integration.id === integrationId
-          ? { 
-              ...integration, 
-              status: 'disconnected',
-              last_sync: undefined
-            }
-          : integration
-      )
-    );
+    try {
+      const { error } = await supabase
+        .from('integrations')
+        .delete()
+        .eq('id', integrationId);
+
+      if (error) throw error;
+
+      await fetchIntegrations();
+    } catch (error) {
+      console.error('Error disconnecting integration:', error);
+    }
+  };
+
+  const handleSync = async (integrationId: string) => {
+    try {
+      const response = await fetch(`/api/integrations/${integrationId}/sync`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) throw new Error('Sync failed');
+
+      await fetchIntegrations();
+    } catch (error) {
+      console.error('Error syncing integration:', error);
+    }
   };
 
   const getStatusColor = (status: Integration['status']) => {
     switch (status) {
-      case 'connected':
+      case 'active':
         return 'text-green-600 bg-green-100';
       case 'error':
         return 'text-red-600 bg-red-100';
@@ -97,6 +166,18 @@ export function IntegrationSettings() {
         return 'text-gray-600 bg-gray-100';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl">
+        <div className="animate-pulse space-y-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-20 bg-gray-200 rounded-lg"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl">
@@ -110,11 +191,12 @@ export function IntegrationSettings() {
       <div className="space-y-4">
         {integrations.map((integration) => {
           const Icon = integration.icon;
-          const isConnected = integration.status === 'connected';
+          const isConnected = integration.status === 'active';
+          const isConnecting = connecting === integration.type;
           
           return (
             <div
-              key={integration.id}
+              key={integration.type}
               className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
             >
               <div className="flex items-center space-x-4">
@@ -143,19 +225,29 @@ export function IntegrationSettings() {
                 </span>
                 
                 {isConnected ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDisconnect(integration.id)}
-                  >
-                    Disconnect
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSync(integration.id!)}
+                    >
+                      Sync
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDisconnect(integration.id!)}
+                    >
+                      Disconnect
+                    </Button>
+                  </>
                 ) : (
                   <Button
                     size="sm"
-                    onClick={() => handleConnect(integration.id)}
+                    disabled={isConnecting}
+                    onClick={() => handleConnect(integration.type)}
                   >
-                    Connect
+                    {isConnecting ? 'Connecting...' : 'Connect'}
                   </Button>
                 )}
               </div>
@@ -173,11 +265,11 @@ export function IntegrationSettings() {
           </div>
           <div className="ml-3">
             <h3 className="text-sm font-medium text-blue-800">
-              Demo Mode
+              Getting Started
             </h3>
             <div className="mt-2 text-sm text-blue-700">
               <p>
-                Integrations are simulated in this demo. In production, these would connect to actual APIs and sync real data from your connected services.
+                Click "Connect" to authenticate with your tools via OAuth. Once connected, we'll automatically sync your client communications and activities.
               </p>
             </div>
           </div>
