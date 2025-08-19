@@ -102,7 +102,10 @@ export function IntegrationSettings() {
     try {
       // First create the integration record
       const availableIntegration = AVAILABLE_INTEGRATIONS.find(a => a.type === integrationType);
-      if (!availableIntegration) return;
+      if (!availableIntegration) {
+        setConnecting(null);
+        return;
+      }
 
       const { data: integration, error } = await supabase
         .from('integrations')
@@ -122,7 +125,6 @@ export function IntegrationSettings() {
       window.location.href = `/api/integrations/oauth/${integrationType}?action=authorize`;
     } catch (error) {
       console.error('Error connecting integration:', error);
-    } finally {
       setConnecting(null);
     }
   };
