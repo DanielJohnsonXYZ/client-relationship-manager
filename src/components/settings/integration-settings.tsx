@@ -12,6 +12,7 @@ import {
   MicrophoneIcon,
 } from '@heroicons/react/24/outline';
 import { createClientSupabase } from '@/lib/supabase-client';
+import { useAuth } from '@/lib/auth-context';
 
 interface Integration {
   id: string;
@@ -68,16 +69,23 @@ export function IntegrationSettings() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
   const supabase = createClientSupabase();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchIntegrations();
-  }, []);
+  }, [user]);
 
   const fetchIntegrations = async () => {
     try {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('integrations')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -100,6 +108,13 @@ export function IntegrationSettings() {
     setConnecting(integrationType);
     
     try {
+      // Check if user is authenticated
+      if (!user) {
+        console.error('User not authenticated');
+        setConnecting(null);
+        return;
+      }
+
       // First create the integration record
       const availableIntegration = AVAILABLE_INTEGRATIONS.find(a => a.type === integrationType);
       if (!availableIntegration) {
@@ -112,7 +127,8 @@ export function IntegrationSettings() {
         .insert({
           type: integrationType,
           name: availableIntegration.name,
-          status: 'inactive'
+          status: 'inactive',
+          user_id: user.id
         })
         .select()
         .single();
