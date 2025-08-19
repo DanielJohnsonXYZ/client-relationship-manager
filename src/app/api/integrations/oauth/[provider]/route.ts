@@ -76,7 +76,7 @@ const OAUTH_CONFIGS = {
     tokenUrl: null,
     scopes: ['read:videos', 'read:workspace'],
     clientId: process.env.LOOM_CLIENT_ID,
-    clientSecret: null,
+    clientSecret: process.env.LOOM_PRIVATE_KEY,
   },
   fireflies: {
     authUrl: null, // API key based, no OAuth
