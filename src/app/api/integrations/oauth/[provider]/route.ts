@@ -129,12 +129,17 @@ export async function GET(
         return handleApiKeyIntegration(provider, config);
       }
 
+      // Validate OAuth credentials are configured
+      if (!config.clientId || !config.clientSecret) {
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=oauth_not_configured`);
+      }
+
       // Step 1: Redirect to OAuth provider
       const state = crypto.randomUUID();
       const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/oauth/${provider}`;
       
       const authUrl = new URL(config.authUrl);
-      authUrl.searchParams.set('client_id', config.clientId!);
+      authUrl.searchParams.set('client_id', config.clientId);
       authUrl.searchParams.set('redirect_uri', redirectUri);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('scope', config.scopes.join(' '));
