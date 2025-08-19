@@ -10,9 +10,9 @@ import {
   FilmIcon,
   MicrophoneIcon,
   DocumentTextIcon,
-  ExternalLinkIcon,
+  ArrowTopRightOnSquareIcon,
 } from '@heroicons/react/24/outline';
-import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
+import { format, isToday, isYesterday } from 'date-fns';
 
 interface Activity {
   id: string;
@@ -283,7 +283,7 @@ export function ClientActivityTimeline({ clientId }: ClientActivityTimelineProps
                             >
                               <FilmIcon className="h-3 w-3 mr-1" />
                               View Recording
-                              <ExternalLinkIcon className="h-3 w-3 ml-1" />
+                              <ArrowTopRightOnSquareIcon className="h-3 w-3 ml-1" />
                             </a>
                           )}
                           
@@ -296,7 +296,7 @@ export function ClientActivityTimeline({ clientId }: ClientActivityTimelineProps
                             >
                               <DocumentTextIcon className="h-3 w-3 mr-1" />
                               View Transcript
-                              <ExternalLinkIcon className="h-3 w-3 ml-1" />
+                              <ArrowTopRightOnSquareIcon className="h-3 w-3 ml-1" />
                             </a>
                           )}
                         </div>
