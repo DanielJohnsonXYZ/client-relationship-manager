@@ -72,11 +72,11 @@ const OAUTH_CONFIGS = {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   },
   loom: {
-    authUrl: 'https://www.loom.com/oauth/authorize',
-    tokenUrl: 'https://www.loom.com/api/oauth/token',
+    authUrl: null, // API key based, no OAuth
+    tokenUrl: null,
     scopes: ['read:videos', 'read:workspace'],
     clientId: process.env.LOOM_CLIENT_ID,
-    clientSecret: process.env.LOOM_CLIENT_SECRET,
+    clientSecret: null,
   },
   fireflies: {
     authUrl: null, // API key based, no OAuth
@@ -84,6 +84,20 @@ const OAUTH_CONFIGS = {
     scopes: ['read:meetings', 'read:transcripts'],
     clientId: process.env.FIREFLIES_API_KEY,
     clientSecret: null,
+  },
+  slack: {
+    authUrl: 'https://slack.com/oauth/v2/authorize',
+    tokenUrl: 'https://slack.com/api/oauth.v2.access',
+    scopes: ['channels:read', 'chat:write', 'users:read'],
+    clientId: process.env.SLACK_CLIENT_ID,
+    clientSecret: process.env.SLACK_CLIENT_SECRET,
+  },
+  calendly: {
+    authUrl: 'https://auth.calendly.com/oauth/authorize',
+    tokenUrl: 'https://auth.calendly.com/oauth/token',
+    scopes: ['default'],
+    clientId: process.env.CALENDLY_CLIENT_ID,
+    clientSecret: process.env.CALENDLY_CLIENT_SECRET,
   },
   zoom: {
     authUrl: 'https://zoom.us/oauth/authorize',
