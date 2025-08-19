@@ -15,15 +15,24 @@ async function handleApiKeyIntegration(provider: string, config: any) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=api_key_missing`);
     }
 
-    // Find the integration using admin client to bypass RLS
-    const { data: integration, error: integrationError } = await supabaseAdmin
+    // Find the most recent integration using admin client to bypass RLS
+    const { data: integrations, error: integrationError } = await supabaseAdmin
       .from('integrations')
       .select('id')
       .eq('user_id', user.id)
       .eq('type', provider)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const integration = integrations?.[0];
 
     if (integrationError || !integration) {
+      console.error('Integration lookup failed:', { 
+        error: integrationError, 
+        userId: user.id, 
+        provider,
+        integration 
+      });
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=integration_not_found`);
     }
 
@@ -193,12 +202,15 @@ export async function GET(
     }
 
     // Store tokens securely - use admin client to bypass RLS
-    const { data: integration, error: integrationError } = await supabaseAdmin
+    const { data: integrations, error: integrationError } = await supabaseAdmin
       .from('integrations')
       .select('id')
       .eq('user_id', user.id)
       .eq('type', provider)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const integration = integrations?.[0];
 
     if (integrationError || !integration) {
       return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=integration_not_found`);

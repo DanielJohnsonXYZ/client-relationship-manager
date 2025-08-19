@@ -122,19 +122,30 @@ export function IntegrationSettings() {
         return;
       }
 
-      const { data: integration, error } = await supabase
+      // Check if integration already exists
+      const { data: existingIntegration } = await supabase
         .from('integrations')
-        .insert({
-          type: integrationType,
-          name: availableIntegration.name,
-          status: 'inactive',
-          user_id: user.id
-        })
-        .select()
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('type', integrationType)
         .single();
 
-      if (error && error.code !== '23505') { // Ignore duplicate key error
-        throw error;
+      if (!existingIntegration) {
+        // Create new integration only if one doesn't exist
+        const { data: integration, error } = await supabase
+          .from('integrations')
+          .insert({
+            type: integrationType,
+            name: availableIntegration.name,
+            status: 'inactive',
+            user_id: user.id
+          })
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
       }
 
       // Redirect to OAuth flow
