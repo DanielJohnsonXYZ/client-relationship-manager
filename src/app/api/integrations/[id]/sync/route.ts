@@ -88,7 +88,7 @@ class GmailSyncService implements SyncService {
 
             if (!existing) {
               // Create new external activity
-              await supabaseClientClientClient.from('external_activities').insert({
+              await supabaseClient.from('external_activities').insert({
                 client_id: clientId,
                 integration_id: integrationId,
                 external_id: message.id,
@@ -200,7 +200,7 @@ class LoomSyncService implements SyncService {
               .single();
 
             if (!existing) {
-              await supabaseClientClientClient.from('external_activities').insert({
+              await supabaseClient.from('external_activities').insert({
                 client_id: clientId,
                 integration_id: integrationId,
                 external_id: video.id,
@@ -307,7 +307,7 @@ class FirefliesSyncService implements SyncService {
               .single();
 
             if (!existing) {
-              await supabaseClientClientClient.from('external_activities').insert({
+              await supabaseClient.from('external_activities').insert({
                 client_id: clientId,
                 integration_id: integrationId,
                 external_id: transcript.id,
@@ -484,7 +484,7 @@ export async function POST(
     } catch (syncError) {
       // Update sync log with error
       if (syncLog?.id) {
-        await supabaseClientClient
+        await supabaseClient
           .from('integration_sync_logs')
           .update({
             status: 'failed',
