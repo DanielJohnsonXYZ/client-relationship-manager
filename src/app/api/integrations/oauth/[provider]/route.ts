@@ -244,7 +244,12 @@ export async function GET(
 
     // Trigger initial sync
     await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/${integration.id}/sync`, {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-internal-call': 'oauth-sync'
+      },
+      body: JSON.stringify({ userId: user.id })
     });
 
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_success=${provider}`);

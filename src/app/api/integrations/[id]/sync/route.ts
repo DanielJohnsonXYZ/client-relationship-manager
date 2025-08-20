@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase } from '@/lib/supabase-server';
+import { createServerSupabase, supabaseAdmin } from '@/lib/supabase-server';
 import { z } from 'zod';
 
 interface SyncService {
@@ -374,17 +374,36 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createServerSupabase();
-    const { data: { user } } = await supabase.auth.getUser();
+    // Check for internal call header
+    const internalCall = request.headers.get('x-internal-call');
+    
+    let user: any;
+    let supabaseClient;
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (internalCall === 'oauth-sync') {
+      // Use admin client for internal OAuth sync calls
+      supabaseClient = supabaseAdmin;
+      // Get user ID from request body for internal calls
+      const body = await request.json().catch(() => ({}));
+      if (!body.userId) {
+        return NextResponse.json({ error: 'User ID required for internal call' }, { status: 400 });
+      }
+      user = { id: body.userId };
+    } else {
+      // Regular user session authentication
+      supabaseClient = createServerSupabase();
+      const { data: { user: sessionUser } } = await supabaseClient.auth.getUser();
+
+      if (!sessionUser) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      user = sessionUser;
     }
 
     const integrationId = params.id;
 
     // Get integration details
-    const { data: integration, error: integrationError } = await supabase
+    const { data: integration, error: integrationError } = await supabaseClient
       .from('integrations')
       .select('*')
       .eq('id', integrationId)
@@ -396,7 +415,7 @@ export async function POST(
     }
 
     // Get access token
-    const { data: tokenData, error: tokenError } = await supabase
+    const { data: tokenData, error: tokenError } = await supabaseClient
       .from('integration_tokens')
       .select('*')
       .eq('integration_id', integrationId)
