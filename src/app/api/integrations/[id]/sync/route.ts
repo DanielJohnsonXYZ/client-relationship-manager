@@ -3,7 +3,7 @@ import { createServerSupabase, supabaseAdmin } from '@/lib/supabase-server';
 import { z } from 'zod';
 
 interface SyncService {
-  syncData(accessToken: string, integrationId: string, userId: string): Promise<SyncResult>;
+  syncData(accessToken: string, integrationId: string, userId: string, supabaseClient: any): Promise<SyncResult>;
 }
 
 interface SyncResult {
@@ -15,7 +15,7 @@ interface SyncResult {
 
 // Gmail sync service
 class GmailSyncService implements SyncService {
-  async syncData(accessToken: string, integrationId: string, userId: string): Promise<SyncResult> {
+  async syncData(accessToken: string, integrationId: string, userId: string, supabaseClient: any): Promise<SyncResult> {
     const result: SyncResult = { recordsProcessed: 0, recordsAdded: 0, recordsUpdated: 0 };
     
     try {
@@ -150,7 +150,7 @@ class GmailSyncService implements SyncService {
 
 // Loom sync service
 class LoomSyncService implements SyncService {
-  async syncData(accessToken: string, integrationId: string, userId: string): Promise<SyncResult> {
+  async syncData(accessToken: string, integrationId: string, userId: string, supabaseClient: any): Promise<SyncResult> {
     const result: SyncResult = { recordsProcessed: 0, recordsAdded: 0, recordsUpdated: 0 };
     
     try {
@@ -253,7 +253,7 @@ class LoomSyncService implements SyncService {
 
 // Fireflies sync service
 class FirefliesSyncService implements SyncService {
-  async syncData(accessToken: string, integrationId: string, userId: string): Promise<SyncResult> {
+  async syncData(accessToken: string, integrationId: string, userId: string, supabaseClient: any): Promise<SyncResult> {
     const result: SyncResult = { recordsProcessed: 0, recordsAdded: 0, recordsUpdated: 0 };
     
     try {
@@ -451,7 +451,7 @@ export async function POST(
       }
 
       // Perform sync
-      const result = await syncService.syncData(tokenData.access_token, integrationId, user.id);
+      const result = await syncService.syncData(tokenData.access_token, integrationId, user.id, supabaseClient);
 
       // Update sync log
       await supabaseClient
