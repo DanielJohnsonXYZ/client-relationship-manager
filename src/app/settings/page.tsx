@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ProfileSettings } from '@/components/settings/profile-settings';
@@ -12,7 +12,7 @@ import {
   Cog8ToothIcon 
 } from '@heroicons/react/24/outline';
 
-export default function SettingsPage() {
+function SettingsContent() {
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'integrations'>('profile');
   const searchParams = useSearchParams();
 
@@ -73,5 +73,19 @@ export default function SettingsPage() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        </div>
+      </DashboardLayout>
+    }>
+      <SettingsContent />
+    </Suspense>
   );
 }
