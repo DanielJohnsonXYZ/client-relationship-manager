@@ -69,6 +69,7 @@ export function IntegrationSettings() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const supabase = createClientSupabase();
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -172,6 +173,8 @@ export function IntegrationSettings() {
 
   const handleDisconnect = async (integrationId: string) => {
     try {
+      setDisconnecting(integrationId);
+      
       const { error } = await supabase
         .from('integrations')
         .delete()
@@ -182,6 +185,8 @@ export function IntegrationSettings() {
       await fetchIntegrations();
     } catch (error) {
       console.error('Error disconnecting integration:', error);
+    } finally {
+      setDisconnecting(null);
     }
   };
 
@@ -280,8 +285,9 @@ export function IntegrationSettings() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDisconnect(integration.id!)}
+                      disabled={disconnecting === integration.id}
                     >
-                      Disconnect
+                      {disconnecting === integration.id ? 'Disconnecting...' : 'Disconnect'}
                     </Button>
                   </>
                 ) : (

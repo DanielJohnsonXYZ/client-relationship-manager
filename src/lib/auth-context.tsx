@@ -29,6 +29,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const supabase = createClientComponentClient<Database>();
 
+  const loadUserProfile = async (user: User) => {
+    try {
+      let { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors
+      
+      if (profile) {
+        setProfile(profile);
+      } else {
+        // Profile doesn't exist, create it
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+          })
+          .select()
+          .maybeSingle();
+        
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          setProfile(null);
+        } else {
+          setProfile(newProfile);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      setProfile(null);
+    }
+  };
+
   useEffect(() => {
     const getSession = async () => {
       try {
@@ -37,41 +72,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            
-            if (profile) {
-              setProfile(profile);
-            } else if (profileError?.code === 'PGRST116') {
-              // Profile doesn't exist, create it
-              const { data: newProfile, error: createError } = await supabase
-                .from('profiles')
-                .insert({
-                  id: session.user.id,
-                  email: session.user.email || '',
-                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-                })
-                .select()
-                .single();
-              
-              if (createError) {
-                console.error('Error creating profile:', createError);
-                setProfile(null);
-              } else {
-                setProfile(newProfile);
-              }
-            } else {
-              console.error('Error fetching profile:', profileError);
-              setProfile(null);
-            }
-          } catch (error) {
-            console.error('Error fetching profile:', error);
-            setProfile(null);
-          }
+          await loadUserProfile(session.user);
+        } else {
+          setProfile(null);
         }
       } catch (error) {
         console.error('Error getting session:', error);
@@ -88,51 +91,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          try {
-            const { data: profile, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            
-            if (profile) {
-              setProfile(profile);
-            } else if (profileError?.code === 'PGRST116') {
-              // Profile doesn't exist, create it
-              const { data: newProfile, error: createError } = await supabase
-                .from('profiles')
-                .insert({
-                  id: session.user.id,
-                  email: session.user.email || '',
-                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
-                })
-                .select()
-                .single();
-              
-              if (createError) {
-                console.error('Error creating profile:', createError);
-                setProfile(null);
-              } else {
-                setProfile(newProfile);
-              }
-            } else {
-              console.error('Error fetching profile:', profileError);
-              setProfile(null);
-            }
-          } catch (error) {
-            console.error('Error fetching profile:', error);
-            setProfile(null);
-          }
+          await loadUserProfile(session.user);
         } else {
           setProfile(null);
         }
         
-        setLoading(false);
+        // Only set loading false if this is not the initial session load
+        if (event !== 'INITIAL_SESSION') {
+          setLoading(false);
+        }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, []); // Empty dependency array since supabase instance is stable
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const { error } = await supabase.auth.signUp({
