@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { ProfileSettings } from '@/components/settings/profile-settings';
 import { NotificationSettings } from '@/components/settings/notification-settings';
@@ -13,6 +14,17 @@ import {
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'integrations'>('profile');
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Switch to integrations tab if redirected from OAuth
+    const integrationSuccess = searchParams.get('integration_success');
+    const integrationError = searchParams.get('integration_error');
+    
+    if (integrationSuccess || integrationError) {
+      setActiveTab('integrations');
+    }
+  }, [searchParams]);
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: UserIcon },

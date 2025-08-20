@@ -38,12 +38,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           try {
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single();
-            setProfile(profile);
+            
+            if (profile) {
+              setProfile(profile);
+            } else if (profileError?.code === 'PGRST116') {
+              // Profile doesn't exist, create it
+              const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+                })
+                .select()
+                .single();
+              
+              if (createError) {
+                console.error('Error creating profile:', createError);
+                setProfile(null);
+              } else {
+                setProfile(newProfile);
+              }
+            } else {
+              console.error('Error fetching profile:', profileError);
+              setProfile(null);
+            }
           } catch (error) {
             console.error('Error fetching profile:', error);
             setProfile(null);
@@ -65,12 +89,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (session?.user) {
           try {
-            const { data: profile } = await supabase
+            const { data: profile, error: profileError } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single();
-            setProfile(profile);
+            
+            if (profile) {
+              setProfile(profile);
+            } else if (profileError?.code === 'PGRST116') {
+              // Profile doesn't exist, create it
+              const { data: newProfile, error: createError } = await supabase
+                .from('profiles')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || '',
+                })
+                .select()
+                .single();
+              
+              if (createError) {
+                console.error('Error creating profile:', createError);
+                setProfile(null);
+              } else {
+                setProfile(newProfile);
+              }
+            } else {
+              console.error('Error fetching profile:', profileError);
+              setProfile(null);
+            }
           } catch (error) {
             console.error('Error fetching profile:', error);
             setProfile(null);
