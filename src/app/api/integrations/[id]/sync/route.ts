@@ -34,7 +34,7 @@ class GmailSyncService implements SyncService {
       const supabase = createServerSupabase();
 
       // Get user's clients to match email addresses
-      const { data: clients } = await supabase
+      const { data: clients } = await supabaseClient
         .from('clients')
         .select('id, email')
         .eq('user_id', userId)
@@ -79,7 +79,7 @@ class GmailSyncService implements SyncService {
 
           if (clientId) {
             // Check if activity already exists
-            const { data: existing } = await supabase
+            const { data: existing } = await supabaseClient
               .from('external_activities')
               .select('id')
               .eq('integration_id', integrationId)
@@ -88,7 +88,7 @@ class GmailSyncService implements SyncService {
 
             if (!existing) {
               // Create new external activity
-              await supabase.from('external_activities').insert({
+              await supabaseClientClientClient.from('external_activities').insert({
                 client_id: clientId,
                 integration_id: integrationId,
                 external_id: message.id,
@@ -181,7 +181,7 @@ class LoomSyncService implements SyncService {
       const supabase = createServerSupabase();
 
       // Get user's clients
-      const { data: clients } = await supabase
+      const { data: clients } = await supabaseClient
         .from('clients')
         .select('id, name, email')
         .eq('user_id', userId);
@@ -192,7 +192,7 @@ class LoomSyncService implements SyncService {
           let clientId = this.findClientByContent(video.name || '', clients || []);
 
           if (clientId) {
-            const { data: existing } = await supabase
+            const { data: existing } = await supabaseClient
               .from('external_activities')
               .select('id')
               .eq('integration_id', integrationId)
@@ -200,7 +200,7 @@ class LoomSyncService implements SyncService {
               .single();
 
             if (!existing) {
-              await supabase.from('external_activities').insert({
+              await supabaseClientClientClient.from('external_activities').insert({
                 client_id: clientId,
                 integration_id: integrationId,
                 external_id: video.id,
@@ -288,7 +288,7 @@ class FirefliesSyncService implements SyncService {
       const supabase = createServerSupabase();
 
       // Get user's clients
-      const { data: clients } = await supabase
+      const { data: clients } = await supabaseClient
         .from('clients')
         .select('id, name, email')
         .eq('user_id', userId);
@@ -299,7 +299,7 @@ class FirefliesSyncService implements SyncService {
           let clientId = this.findClientByParticipants(transcript.participants, clients || []);
 
           if (clientId) {
-            const { data: existing } = await supabase
+            const { data: existing } = await supabaseClient
               .from('external_activities')
               .select('id')
               .eq('integration_id', integrationId)
@@ -307,7 +307,7 @@ class FirefliesSyncService implements SyncService {
               .single();
 
             if (!existing) {
-              await supabase.from('external_activities').insert({
+              await supabaseClientClientClient.from('external_activities').insert({
                 client_id: clientId,
                 integration_id: integrationId,
                 external_id: transcript.id,
@@ -432,7 +432,7 @@ export async function POST(
     }
 
     // Start sync log
-    const { data: syncLog } = await supabase
+    const { data: syncLog } = await supabaseClient
       .from('integration_sync_logs')
       .insert({
         integration_id: integrationId,
@@ -454,7 +454,7 @@ export async function POST(
       const result = await syncService.syncData(tokenData.access_token, integrationId, user.id);
 
       // Update sync log
-      await supabase
+      await supabaseClient
         .from('integration_sync_logs')
         .update({
           status: result.error ? 'failed' : 'success',
@@ -467,7 +467,7 @@ export async function POST(
         .eq('id', syncLog?.id);
 
       // Update integration last_sync
-      await supabase
+      await supabaseClient
         .from('integrations')
         .update({ last_sync: new Date().toISOString() })
         .eq('id', integrationId);
@@ -484,7 +484,7 @@ export async function POST(
     } catch (syncError) {
       // Update sync log with error
       if (syncLog?.id) {
-        await supabase
+        await supabaseClientClient
           .from('integration_sync_logs')
           .update({
             status: 'failed',
