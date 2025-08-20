@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { 
@@ -90,7 +90,7 @@ export function IntegrationSettings() {
     }
   }, [searchParams]);
 
-  const fetchIntegrations = async () => {
+  const fetchIntegrations = useCallback(async () => {
     try {
       if (!user) {
         setLoading(false);
@@ -117,7 +117,7 @@ export function IntegrationSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, supabase]);
 
   const handleConnect = async (integrationType: string) => {
     setConnecting(integrationType);

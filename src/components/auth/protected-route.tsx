@@ -9,6 +9,18 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
+    // Add a timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Auth loading timeout, redirecting to login');
+        router.push('/login');
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [loading, router]);
+
+  useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }

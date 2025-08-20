@@ -29,82 +29,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   const supabase = createClientComponentClient<Database>();
 
-  const loadUserProfile = async (user: User) => {
-    try {
-      let { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle(); // Use maybeSingle instead of single to avoid errors
-      
-      if (profile) {
-        setProfile(profile);
-      } else {
-        // Profile doesn't exist, create it
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: user.id,
-            email: user.email || '',
-            full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
-          })
-          .select()
-          .maybeSingle();
-        
-        if (createError) {
-          console.error('Error creating profile:', createError);
-          setProfile(null);
-        } else {
-          setProfile(newProfile);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading profile:', error);
-      setProfile(null);
-    }
-  };
-
   useEffect(() => {
-    const getSession = async () => {
+    let mounted = true;
+
+    const initialize = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Clear any potentially corrupted state first
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+          // If session is corrupted, sign out to clear it
+          await supabase.auth.signOut();
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+        
+        if (!mounted) return;
+        
         setSession(session);
         setUser(session?.user ?? null);
         
+        // Only load profile if we have a valid session and user
         if (session?.user) {
-          await loadUserProfile(session.user);
-        } else {
-          setProfile(null);
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .maybeSingle();
+            
+            if (mounted) {
+              setProfile(profile);
+            }
+          } catch (error) {
+            console.error('Error loading profile:', error);
+            if (mounted) {
+              setProfile(null);
+            }
+          }
         }
       } catch (error) {
-        console.error('Error getting session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          await loadUserProfile(session.user);
-        } else {
+        console.error('Error initializing auth:', error);
+        // Clear state on any error
+        if (mounted) {
+          setSession(null);
+          setUser(null);
           setProfile(null);
         }
-        
-        // Only set loading false if this is not the initial session load
-        if (event !== 'INITIAL_SESSION') {
+      } finally {
+        if (mounted) {
           setLoading(false);
         }
       }
+    };
+
+    initialize();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+        
+        console.log('Auth state change:', event, session?.user?.id);
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setProfile(null); // Reset profile on auth change
+        setLoading(false);
+      }
     );
 
-    return () => subscription.unsubscribe();
-  }, []); // Empty dependency array since supabase instance is stable
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const { error } = await supabase.auth.signUp({
@@ -128,6 +133,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Clear local state immediately
+    setUser(null);
+    setProfile(null);
+    setSession(null);
+    
     const { error } = await supabase.auth.signOut();
     return { error };
   };
