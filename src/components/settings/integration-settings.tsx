@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { 
   EnvelopeIcon,
@@ -70,10 +71,23 @@ export function IntegrationSettings() {
   const [connecting, setConnecting] = useState<string | null>(null);
   const supabase = createClientSupabase();
   const { user } = useAuth();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     fetchIntegrations();
   }, [user]);
+
+  useEffect(() => {
+    // Clear connecting state when redirected back from OAuth
+    const integrationSuccess = searchParams.get('integration_success');
+    const integrationError = searchParams.get('integration_error');
+    
+    if (integrationSuccess || integrationError) {
+      setConnecting(null);
+      // Refresh integrations to show updated status
+      fetchIntegrations();
+    }
+  }, [searchParams]);
 
   const fetchIntegrations = async () => {
     try {
