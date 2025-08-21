@@ -10,25 +10,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if Spark Shipping already exists
+    // Check if Charles@SparkShipping already exists
     const { data: existingClient } = await supabase
       .from('clients')
       .select('id')
       .eq('user_id', user.id)
-      .eq('email', 'contact@sparkshipping.com')
+      .eq('email', 'charles@sparkshipping.com')
       .single();
 
     if (existingClient) {
-      return NextResponse.json({ message: 'Spark Shipping already exists', clientId: existingClient.id });
+      return NextResponse.json({ message: 'Charles from Spark Shipping already exists', clientId: existingClient.id });
     }
 
-    // Add Spark Shipping client
+    // Add Charles@SparkShipping client
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .insert({
         user_id: user.id,
-        name: 'Spark Shipping',
-        email: 'contact@sparkshipping.com',
+        name: 'Charles',
+        email: 'charles@sparkshipping.com',
         company: 'Spark Shipping Inc',
         phone: '+1-555-SPARK',
         status: 'active',
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Spark Shipping client created successfully',
+      message: 'Charles from Spark Shipping created successfully',
       client: client,
       hasCommError: !!commError,
       hasAlertError: !!alertError,

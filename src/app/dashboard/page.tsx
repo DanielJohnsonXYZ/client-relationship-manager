@@ -6,6 +6,7 @@ import { MetricCard } from '@/components/dashboard/metric-card';
 import { HealthTrendChart } from '@/components/dashboard/health-trend-chart';
 import { AlertsList } from '@/components/dashboard/alerts-list';
 import { ClientStatusChart } from '@/components/dashboard/client-status-chart';
+import { DemoSetupCard } from '@/components/setup/demo-setup-card';
 
 interface DashboardData {
   overview: {
@@ -94,6 +95,11 @@ export default function DashboardPage() {
             Overview of your client relationships and key metrics
           </p>
         </div>
+
+        {/* Show setup card if no clients */}
+        {data.overview.totalClients === 0 && (
+          <DemoSetupCard />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard

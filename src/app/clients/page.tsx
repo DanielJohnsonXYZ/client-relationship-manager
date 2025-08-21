@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ClientCard } from '@/components/clients/client-card';
 import { ClientModal } from '@/components/clients/client-modal';
 import { CSVImport } from '@/components/clients/csv-import';
+import { DemoSetupCard } from '@/components/setup/demo-setup-card';
 import { PlusIcon, MagnifyingGlassIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 
 interface Client {
@@ -176,19 +177,24 @@ export default function ClientsPage() {
         </div>
 
         {filteredClients.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="mx-auto h-12 w-12 text-gray-400">
-              <UserGroupIcon className="h-12 w-12" />
-            </div>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No clients</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Get started by creating your first client.
-            </p>
-            <div className="mt-6">
-              <Button onClick={handleAddClient}>
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Add Client
-              </Button>
+          <div className="space-y-8">
+            {clients.length === 0 && (
+              <DemoSetupCard />
+            )}
+            <div className="text-center py-12">
+              <div className="mx-auto h-12 w-12 text-gray-400">
+                <UserGroupIcon className="h-12 w-12" />
+              </div>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No clients</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Get started by creating your first client or using demo data.
+              </p>
+              <div className="mt-6">
+                <Button onClick={handleAddClient}>
+                  <PlusIcon className="h-5 w-5 mr-2" />
+                  Add Client
+                </Button>
+              </div>
             </div>
           </div>
         ) : (

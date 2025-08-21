@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { InsightCard } from '@/components/insights/insight-card';
 import { RecommendationCard } from '@/components/insights/recommendation-card';
+import { DemoSetupCard } from '@/components/setup/demo-setup-card';
 import { LightBulbIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 
 interface Insight {
@@ -131,13 +132,16 @@ export default function InsightsPage() {
 
         {activeTab === 'insights' && (
           <div className="space-y-4">
-            {insights.length === 0 ? (
-              <div className="text-center py-12">
-                <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No insights available</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  AI insights will appear here as we analyze your client data.
-                </p>
+            {insights.length === 0 && !loading ? (
+              <div className="space-y-6">
+                <DemoSetupCard />
+                <div className="text-center py-12">
+                  <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No insights available</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    AI insights will appear here once you have client data to analyze.
+                  </p>
+                </div>
               </div>
             ) : (
               insights.map((insight) => (
