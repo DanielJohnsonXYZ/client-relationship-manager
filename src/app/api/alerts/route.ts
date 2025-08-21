@@ -88,7 +88,13 @@ export async function POST(request: NextRequest) {
           status: 'active',
         },
       ])
-      .select()
+      .select(`
+        *,
+        clients:client_id (
+          name,
+          company
+        )
+      `)
       .single();
 
     if (error) {
@@ -96,6 +102,62 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ alert }, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+    
+    const supabase = createServerSupabase();
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { id, status, priority, description, resolved_at } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Alert ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const updateData: any = {};
+    if (status !== undefined) updateData.status = status;
+    if (priority !== undefined) updateData.priority = priority;
+    if (description !== undefined) updateData.description = description;
+    if (resolved_at !== undefined) updateData.resolved_at = resolved_at;
+
+    const { data: alert, error } = await supabase
+      .from('alerts')
+      .update(updateData)
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select(`
+        *,
+        clients:client_id (
+          name,
+          company
+        )
+      `)
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ alert });
   } catch (error) {
     return NextResponse.json(
       { error: 'Internal server error' },

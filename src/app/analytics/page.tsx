@@ -10,39 +10,31 @@ import { HealthScoreDistribution } from '@/components/analytics/health-score-dis
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState('30d');
   const [loading, setLoading] = useState(true);
-
-  // Mock data for demonstration
-  const [analyticsData] = useState({
-    revenue: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-      data: [12000, 15000, 13500, 18000, 16500, 22000],
-    },
-    communications: {
-      labels: ['Email', 'Calls', 'Meetings', 'Slack', 'Other'],
-      data: [45, 23, 18, 10, 4],
-    },
-    sentiment: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-      positive: [65, 72, 68, 75, 70, 78],
-      neutral: [25, 20, 23, 18, 22, 16],
-      negative: [10, 8, 9, 7, 8, 6],
-    },
-    healthDistribution: {
-      labels: ['0-20', '21-40', '41-60', '61-80', '81-100'],
-      data: [3, 8, 15, 25, 18],
-    },
-    metrics: {
-      avgResponseTime: '2.3 hours',
-      clientSatisfaction: '87%',
-      renewalRate: '94%',
-      totalCommunications: 1247,
-    },
-  });
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setLoading(false), 1000);
-    return () => clearTimeout(timer);
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch(`/api/analytics?timeRange=${timeRange}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch analytics data');
+        }
+        
+        const data = await response.json();
+        setAnalyticsData(data);
+      } catch (err) {
+        setError(err.message);
+        console.error('Error fetching analytics:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
   }, [timeRange]);
 
   if (loading) {
@@ -55,6 +47,33 @@ export default function AnalyticsPage() {
               <div key={i} className="bg-gray-200 h-80 rounded-lg" />
             ))}
           </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <div className="text-red-600 mb-4">Error loading analytics data</div>
+          <p className="text-gray-500">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!analyticsData) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <div className="text-gray-600">No analytics data available</div>
         </div>
       </DashboardLayout>
     );

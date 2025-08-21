@@ -59,8 +59,83 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email, company, phone, notes, tags } = body;
+    const { name, email, company, phone, notes, tags, setupSpark } = body;
 
+    // Special handling for Spark Shipping setup
+    if (setupSpark === true) {
+      // Check if Spark Shipping already exists
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .eq('email', 'contact@sparkshipping.com')
+        .single();
+
+      if (existingClient) {
+        return NextResponse.json({ 
+          message: 'Spark Shipping already exists', 
+          client: existingClient,
+          alreadyExists: true 
+        });
+      }
+
+      // Create Spark Shipping with full data
+      const { data: sparkClient, error: sparkError } = await supabase
+        .from('clients')
+        .insert({
+          user_id: user.id,
+          name: 'Spark Shipping',
+          email: 'contact@sparkshipping.com',
+          company: 'Spark Shipping Inc',
+          phone: '+1-555-SPARK',
+          status: 'active',
+          health_score: 88,
+          total_revenue: 45000.00,
+          last_contact_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          next_follow_up: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          notes: 'Leading logistics company, excellent communication, potential for expansion',
+          tags: ['logistics', 'shipping', 'enterprise', 'high-value'],
+        })
+        .select()
+        .single();
+
+      if (sparkError) {
+        return NextResponse.json({ error: 'Failed to create Spark Shipping', details: sparkError }, { status: 500 });
+      }
+
+      // Add communication record
+      await supabase.from('communications').insert({
+        client_id: sparkClient.id,
+        user_id: user.id,
+        type: 'email',
+        subject: 'Q1 Logistics Partnership Review',
+        content: 'Thank you for the excellent service this quarter. Our shipping volumes have increased 25% and your team has handled everything perfectly. Looking forward to discussing expansion opportunities.',
+        direction: 'inbound',
+        sentiment_score: 0.9,
+        sentiment_label: 'positive',
+        communication_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      });
+
+      // Add opportunity alert
+      await supabase.from('alerts').insert({
+        user_id: user.id,
+        client_id: sparkClient.id,
+        type: 'opportunity',
+        title: 'Expansion Opportunity - Spark Shipping',
+        description: 'Client mentioned 25% volume increase and interest in discussing expansion. Schedule follow-up meeting.',
+        priority: 'high',
+        status: 'active',
+      });
+
+      return NextResponse.json({ 
+        success: true,
+        message: 'Spark Shipping created successfully!',
+        client: sparkClient,
+        userId: user.id
+      }, { status: 201 });
+    }
+
+    // Regular client creation
     if (!name) {
       return NextResponse.json(
         { error: 'Name is required' },

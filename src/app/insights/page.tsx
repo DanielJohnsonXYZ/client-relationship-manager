@@ -32,102 +32,32 @@ export default function InsightsPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'insights' | 'recommendations'>('insights');
 
-  // Mock AI-generated insights
   useEffect(() => {
-    const mockInsights: Insight[] = [
-      {
-        id: '1',
-        type: 'trend',
-        title: 'Communication Response Times Improving',
-        description: 'Your average response time to client emails has improved by 23% over the last month. Clients with faster response times show 15% higher satisfaction scores.',
-        impact: 'medium',
-        confidence: 85,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: '2',
-        type: 'risk',
-        title: 'Client Health Score Declining',
-        description: 'Three high-value clients show declining health scores. Common factors include reduced communication frequency and delayed project deliverables.',
-        impact: 'high',
-        confidence: 92,
-        created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: '3',
-        type: 'opportunity',
-        title: 'Upselling Potential Identified',
-        description: 'Five clients have mentioned expansion or additional services in recent communications. Combined potential value: $45,000.',
-        impact: 'high',
-        confidence: 78,
-        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: '4',
-        type: 'pattern',
-        title: 'Friday Communications Peak',
-        description: 'Client communications peak on Fridays at 2-4 PM. Consider scheduling important updates during this window for better engagement.',
-        impact: 'low',
-        confidence: 88,
-        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ];
+    const fetchInsights = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch('/api/insights');
+        if (!response.ok) {
+          throw new Error('Failed to fetch insights');
+        }
+        
+        const data = await response.json();
+        setInsights(data.insights || []);
+        setRecommendations(data.recommendations || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error occurred');
+        console.error('Error fetching insights:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    const mockRecommendations: Recommendation[] = [
-      {
-        id: '1',
-        title: 'Implement Weekly Check-ins',
-        description: 'Establish regular weekly check-ins with your top 5 clients to maintain engagement and catch issues early.',
-        priority: 'high',
-        effort: 'medium',
-        impact: 'high',
-        category: 'communication',
-        action_items: [
-          'Schedule recurring calendar invites',
-          'Create check-in agenda template',
-          'Set up follow-up task reminders',
-          'Track meeting outcomes'
-        ]
-      },
-      {
-        id: '2',
-        title: 'Automate Invoice Reminders',
-        description: 'Set up automated email reminders for overdue invoices to improve cash flow and reduce payment delays.',
-        priority: 'medium',
-        effort: 'low',
-        impact: 'medium',
-        category: 'revenue',
-        action_items: [
-          'Configure email automation tool',
-          'Create reminder email templates',
-          'Set escalation schedule',
-          'Monitor payment response rates'
-        ]
-      },
-      {
-        id: '3',
-        title: 'Create Client Health Dashboard',
-        description: 'Build a visual dashboard to track client health metrics and identify at-risk relationships proactively.',
-        priority: 'medium',
-        effort: 'high',
-        impact: 'high',
-        category: 'retention',
-        action_items: [
-          'Define key health metrics',
-          'Set up data collection',
-          'Design visual indicators',
-          'Create alert thresholds'
-        ]
-      },
-    ];
-
-    setTimeout(() => {
-      setInsights(mockInsights);
-      setRecommendations(mockRecommendations);
-      setLoading(false);
-    }, 1500);
+    fetchInsights();
   }, []);
 
   if (loading) {
@@ -140,6 +70,23 @@ export default function InsightsPage() {
               <div key={i} className="bg-gray-200 h-32 rounded-lg" />
             ))}
           </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <div className="text-red-600 mb-4">Error loading AI insights</div>
+          <p className="text-gray-500">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
         </div>
       </DashboardLayout>
     );

@@ -187,7 +187,7 @@ export function UnstructuredImport() {
             placeholder="Paste your text data here... 
 
 Example:
-From: john@example.com
+From: contact@sparkshipping.com
 Subject: Project Update
 Hi, thanks for the great work on the project! The client TechCorp is very happy.
 
@@ -234,9 +234,9 @@ We had issues with the delivery but overall satisfied with service."
 {`{
   "source": "your_system",
   "type": "email",
-  "client_identifier": "john@example.com",
+  "client_identifier": "contact@sparkshipping.com",
   "data": {
-    "from_email": "john@example.com",
+    "from_email": "contact@sparkshipping.com",
     "from_name": "John Smith", 
     "subject": "Project Update",
     "body": "Thanks for the excellent work!",

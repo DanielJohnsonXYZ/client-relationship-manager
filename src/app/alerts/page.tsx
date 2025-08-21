@@ -27,102 +27,93 @@ interface Alert {
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('active');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
 
-  // Mock data for demonstration
-  useEffect(() => {
-    const mockAlerts: Alert[] = [
-      {
-        id: '1',
-        user_id: 'user1',
-        client_id: 'client1',
-        type: 'payment_risk',
-        title: 'Invoice overdue by 15 days',
-        description: 'Client ABC Corp has an overdue invoice worth $5,000',
-        priority: 'high',
-        status: 'active',
-        created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        resolved_at: null,
-        clients: { name: 'John Smith', company: 'ABC Corp' }
-      },
-      {
-        id: '2',
-        user_id: 'user1',
-        client_id: 'client2',
-        type: 'low_engagement',
-        title: 'No communication in 2 weeks',
-        description: 'Client has not responded to recent emails',
-        priority: 'medium',
-        status: 'active',
-        created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        resolved_at: null,
-        clients: { name: 'Sarah Johnson', company: 'XYZ Inc' }
-      },
-      {
-        id: '3',
-        user_id: 'user1',
-        client_id: 'client3',
-        type: 'contract_renewal',
-        title: 'Contract renewal due soon',
-        description: 'Annual contract expires in 30 days',
-        priority: 'high',
-        status: 'active',
-        created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        resolved_at: null,
-        clients: { name: 'Mike Wilson', company: 'Tech Solutions' }
-      },
-      {
-        id: '4',
-        user_id: 'user1',
-        client_id: 'client4',
-        type: 'opportunity',
-        title: 'Potential upsell opportunity',
-        description: 'Client mentioned expanding project scope',
-        priority: 'medium',
-        status: 'active',
-        created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-        resolved_at: null,
-        clients: { name: 'Lisa Davis', company: 'Design Studio' }
+  const fetchAlerts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (priorityFilter !== 'all') params.append('priority', priorityFilter);
+      
+      const response = await fetch(`/api/alerts?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch alerts');
       }
-    ];
-
-    setTimeout(() => {
-      setAlerts(mockAlerts);
+      
+      const data = await response.json();
+      setAlerts(data.alerts || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred');
+      console.error('Error fetching alerts:', err);
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  };
 
-  const filteredAlerts = alerts.filter(alert => {
-    const matchesStatus = statusFilter === 'all' || alert.status === statusFilter;
-    const matchesPriority = priorityFilter === 'all' || alert.priority === priorityFilter;
-    return matchesStatus && matchesPriority;
-  });
+  useEffect(() => {
+    fetchAlerts();
+  }, [statusFilter, priorityFilter]);
+
+  // No need to filter on client side since server does it
+  const filteredAlerts = alerts;
 
   const handleUpdateAlert = async (alertId: string, updates: Partial<Alert>) => {
-    setAlerts(alerts.map(alert => 
-      alert.id === alertId ? { ...alert, ...updates } : alert
-    ));
+    try {
+      const response = await fetch('/api/alerts', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: alertId,
+          ...updates,
+          resolved_at: updates.status === 'resolved' ? new Date().toISOString() : updates.resolved_at,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update alert');
+      }
+
+      const data = await response.json();
+      
+      // Update local state
+      setAlerts(alerts.map(alert => 
+        alert.id === alertId ? { ...alert, ...data.alert } : alert
+      ));
+    } catch (err) {
+      console.error('Error updating alert:', err);
+      setError('Failed to update alert');
+    }
   };
 
   const handleCreateAlert = async (alertData: Partial<Alert>) => {
-    const newAlert: Alert = {
-      id: Math.random().toString(),
-      user_id: 'user1',
-      client_id: null,
-      type: 'follow_up_needed',
-      title: '',
-      description: null,
-      priority: 'medium',
-      status: 'active',
-      created_at: new Date().toISOString(),
-      resolved_at: null,
-      ...alertData,
-    } as Alert;
-    
-    setAlerts([newAlert, ...alerts]);
-    setShowModal(false);
+    try {
+      const response = await fetch('/api/alerts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(alertData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create alert');
+      }
+
+      const data = await response.json();
+      setAlerts([data.alert, ...alerts]);
+      setShowModal(false);
+    } catch (err) {
+      console.error('Error creating alert:', err);
+      setError('Failed to create alert');
+    }
   };
 
   if (loading) {
@@ -135,6 +126,23 @@ export default function AlertsPage() {
               <div key={i} className="bg-gray-200 h-24 rounded-lg" />
             ))}
           </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <div className="text-red-600 mb-4">Error loading alerts</div>
+          <p className="text-gray-500">{error}</p>
+          <button 
+            onClick={() => fetchAlerts()} 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
         </div>
       </DashboardLayout>
     );

@@ -83,11 +83,11 @@ export async function GET(request: NextRequest) {
       negative: communications.filter(c => c.sentiment_score < -0.1).length,
     };
 
-    // Health score trend (mock data for now)
-    const healthTrend = Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      score: Math.floor(averageHealthScore + Math.random() * 20 - 10)
-    }));
+    // Health score trend based on actual client data
+    const healthTrend = totalClients > 0 ? Array.from({ length: 7 }, (_, i) => ({
+      date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      score: Math.floor(averageHealthScore)
+    })) : [];
 
     const dashboardData = {
       overview: {
@@ -102,6 +102,14 @@ export async function GET(request: NextRequest) {
       sentimentBreakdown,
       healthTrend,
       recentAlerts: alerts.slice(0, 5),
+      // Debug info to help troubleshoot
+      debug: {
+        hasClients: clients.length > 0,
+        clientCount: clients.length,
+        alertCount: alerts.length,
+        communicationCount: communications.length,
+        userId: user.id,
+      },
     };
 
     return NextResponse.json(dashboardData);

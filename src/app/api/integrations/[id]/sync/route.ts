@@ -19,6 +19,8 @@ class GmailSyncService implements SyncService {
     const result: SyncResult = { recordsProcessed: 0, recordsAdded: 0, recordsUpdated: 0 };
     
     try {
+      console.log(`[Gmail Sync] Starting sync for user ${userId}, integration ${integrationId}`);
+      
       // Get user's Gmail messages
       const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50', {
         headers: {
@@ -27,18 +29,25 @@ class GmailSyncService implements SyncService {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.log(`[Gmail Sync] API Error: ${response.status} ${response.statusText}`, errorText);
         throw new Error(`Gmail API error: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log(`[Gmail Sync] Found ${data.messages?.length || 0} messages`);
+      
       const supabase = createServerSupabase();
 
       // Get user's clients to match email addresses
       const { data: clients } = await supabaseClient
         .from('clients')
-        .select('id, email')
+        .select('id, email, name')
         .eq('user_id', userId)
         .not('email', 'is', null);
+
+      console.log(`[Gmail Sync] Found ${clients?.length || 0} clients to match against:`, 
+        clients?.map(c => ({ name: c.name, email: c.email })) || []);
 
       const clientEmailMap = new Map(clients?.map(c => [c.email?.toLowerCase(), c.id]) || []);
 
@@ -77,7 +86,12 @@ class GmailSyncService implements SyncService {
             }
           }
 
+          // Log email matching attempt
+          console.log(`[Gmail Sync] Processing email from: ${fromEmail}, to: ${toEmails.join(', ')}, subject: ${subjectHeader}`);
+          
           if (clientId) {
+            console.log(`[Gmail Sync] Matched email to client ID: ${clientId}`);
+            
             // Check if activity already exists
             const { data: existing } = await supabaseClient
               .from('external_activities')
@@ -87,6 +101,8 @@ class GmailSyncService implements SyncService {
               .single();
 
             if (!existing) {
+              console.log(`[Gmail Sync] Creating new activity for message ${message.id}`);
+              
               // Create new external activity
               await supabaseClient.from('external_activities').insert({
                 client_id: clientId,
@@ -105,7 +121,11 @@ class GmailSyncService implements SyncService {
               });
 
               result.recordsAdded++;
+            } else {
+              console.log(`[Gmail Sync] Activity already exists for message ${message.id}`);
             }
+          } else {
+            console.log(`[Gmail Sync] No client match found for emails: ${fromEmail}, ${toEmails.join(', ')}`);
           }
 
           result.recordsProcessed++;
