@@ -76,13 +76,16 @@ export function IntegrationSettings() {
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [integrationStatuses, setIntegrationStatuses] = useState<any[]>([]);
   const supabase = createClientSupabase();
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
   useEffect(() => {
     fetchIntegrations();
+    fetchIntegrationStatuses();
   }, [user]);
 
   useEffect(() => {
@@ -139,6 +142,18 @@ export function IntegrationSettings() {
     }
   }, [user, supabase]);
 
+  const fetchIntegrationStatuses = useCallback(async () => {
+    try {
+      const response = await fetch('/api/integrations/status');
+      if (response.ok) {
+        const data = await response.json();
+        setIntegrationStatuses(data.integrations || []);
+      }
+    } catch (error) {
+      console.error('Error fetching integration statuses:', error);
+    }
+  }, []);
+
   const handleConnect = async (integrationType: string) => {
     setConnecting(integrationType);
     
@@ -146,6 +161,14 @@ export function IntegrationSettings() {
       // Check if user is authenticated
       if (!user) {
         console.error('User not authenticated');
+        setConnecting(null);
+        return;
+      }
+
+      // Check if integration is properly configured
+      const status = integrationStatuses.find(s => s.type === integrationType);
+      if (status && !status.configured) {
+        setErrorMessage(`${status.name} is not properly configured. Missing environment variables: ${status.missingEnvVars.join(', ')}`);
         setConnecting(null);
         return;
       }
@@ -210,17 +233,34 @@ export function IntegrationSettings() {
     }
   };
 
-  const handleSync = async (integrationId: string) => {
+  const handleSync = async (integrationId: string, integrationType: string) => {
+    setSyncing(integrationId);
+    
     try {
       const response = await fetch(`/api/integrations/${integrationId}/sync`, {
         method: 'POST',
       });
 
-      if (!response.ok) throw new Error('Sync failed');
+      const result = await response.json();
 
+      if (!response.ok) {
+        throw new Error(result.error || 'Sync failed');
+      }
+
+      // Show success message
+      console.log(`${integrationType} sync completed:`, result);
+      
+      // Refresh integrations to show updated last_sync time
       await fetchIntegrations();
+      
+      // Clear any previous errors
+      setErrorMessage(null);
+      
     } catch (error) {
       console.error('Error syncing integration:', error);
+      setErrorMessage(`Failed to sync ${integrationType}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setSyncing(null);
     }
   };
 
@@ -288,6 +328,8 @@ export function IntegrationSettings() {
           const Icon = integration.icon;
           const isConnected = integration.status === 'active';
           const isConnecting = connecting === integration.type;
+          const isSyncing = syncing === integration.id;
+          const status = integrationStatuses.find(s => s.type === integration.type);
           
           return (
             <div
@@ -306,6 +348,11 @@ export function IntegrationSettings() {
                   <p className="text-xs text-gray-500">
                     {integration.description}
                   </p>
+                  {!status?.configured && (
+                    <p className="text-xs text-red-600 mt-1">
+                      ⚠️ Missing configuration: {status?.missingEnvVars.join(', ')}
+                    </p>
+                  )}
                   {integration.last_sync && (
                     <p className="text-xs text-gray-400 mt-1">
                       Last synced: {new Date(integration.last_sync).toLocaleString()}
@@ -324,9 +371,10 @@ export function IntegrationSettings() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleSync(integration.id!)}
+                      onClick={() => handleSync(integration.id!, integration.type)}
+                      disabled={isSyncing}
                     >
-                      Sync
+                      {isSyncing ? 'Syncing...' : 'Sync'}
                     </Button>
                     <Button
                       variant="outline"
@@ -340,10 +388,11 @@ export function IntegrationSettings() {
                 ) : (
                   <Button
                     size="sm"
-                    disabled={isConnecting}
+                    disabled={isConnecting || !status?.configured}
                     onClick={() => handleConnect(integration.type)}
+                    className={!status?.configured ? 'opacity-50 cursor-not-allowed' : ''}
                   >
-                    {isConnecting ? 'Connecting...' : 'Connect'}
+                    {isConnecting ? 'Connecting...' : !status?.configured ? 'Not Configured' : 'Connect'}
                   </Button>
                 )}
               </div>

@@ -9,13 +9,13 @@ export function DemoSetupCard() {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
 
-  const handleSetup = async () => {
+  const handleSetup = async (endpoint: string) => {
     try {
       setLoading(true);
       setStatus('idle');
       setMessage('');
 
-      const response = await fetch('/api/setup-spark-shipping', {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,6 +45,9 @@ export function DemoSetupCard() {
     }
   };
 
+  const handleSetupSpark = () => handleSetup('/api/setup-spark-shipping');
+  const handleSetupSampleData = () => handleSetup('/api/sample-data');
+
   return (
     <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
       <div className="flex items-start">
@@ -66,28 +69,27 @@ export function DemoSetupCard() {
               ? 'Demo client data created successfully! The page will refresh to show your new data.'
               : status === 'error'
               ? `Error: ${message}`
-              : 'Create Charles from Spark Shipping as a demo client with sample communications and alerts to see the platform in action.'
+              : 'Generate sample clients with realistic communications, health scores, and alerts to populate your dashboard.'
             }
           </p>
           
           {status === 'idle' && (
-            <div className="mt-4">
+            <div className="mt-4 flex space-x-3">
               <Button
-                onClick={handleSetup}
+                onClick={handleSetupSpark}
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-green-600 hover:bg-green-700"
               >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Setting up...
-                  </>
-                ) : (
-                  <>
-                    <PlayIcon className="h-4 w-4 mr-2" />
-                    Create Demo Data
-                  </>
-                )}
+                {loading ? 'Setting up...' : 'Create Demo Client'}
+              </Button>
+              
+              <Button
+                onClick={handleSetupSampleData}
+                disabled={loading}
+                variant="outline"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                {loading ? 'Creating...' : 'Generate Sample Data'}
               </Button>
             </div>
           )}
@@ -95,14 +97,11 @@ export function DemoSetupCard() {
           {status === 'success' && (
             <div className="mt-4 p-3 bg-green-50 rounded-md">
               <p className="text-sm text-green-700">
-                ✅ Charles from Spark Shipping has been added with:
+                ✅ {message}
               </p>
-              <ul className="mt-1 text-sm text-green-600 list-disc list-inside">
-                <li>Client profile with 88/100 health score</li>
-                <li>Sample communication history</li>
-                <li>High-priority opportunity alert</li>
-                <li>$45,000 revenue tracking</li>
-              </ul>
+              <p className="mt-1 text-sm text-green-600">
+                Your dashboard now has real data to explore! Check out the Analytics and Communications pages.
+              </p>
             </div>
           )}
         </div>
