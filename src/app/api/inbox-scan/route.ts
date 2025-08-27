@@ -141,9 +141,9 @@ async function scanGmailForClients(accessToken: string, userId: string, supabase
     // Generate client suggestions
     const suggestions: ClientSuggestion[] = [];
 
-    for (const [email, contact] of contactMap) {
-      if (existingEmails.has(email.toLowerCase())) continue;
-      if (!contact.isExternal) continue;
+    contactMap.forEach((contact, email) => {
+      if (existingEmails.has(email.toLowerCase())) return;
+      if (!contact.isExternal) return;
       
       const confidence = calculateConfidence(contact);
       
@@ -160,7 +160,7 @@ async function scanGmailForClients(accessToken: string, userId: string, supabase
           estimatedRevenue: estimateRevenue(contact),
         });
       }
-    }
+    });
 
     // Sort by confidence score
     suggestions.sort((a, b) => b.confidence - a.confidence);
