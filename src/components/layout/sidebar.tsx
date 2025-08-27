@@ -12,12 +12,14 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   CloudArrowUpIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/auth-context';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Clients', href: '/clients', icon: UserGroupIcon },
+  { name: 'Communications', href: '/communications', icon: ChatBubbleLeftRightIcon },
   { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   { name: 'Alerts', href: '/alerts', icon: ExclamationTriangleIcon },
   { name: 'Insights', href: '/insights', icon: LightBulbIcon },

@@ -382,10 +382,125 @@ class FirefliesSyncService implements SyncService {
   }
 }
 
+// Basecamp sync service
+class BasecampSyncService implements SyncService {
+  async syncData(accessToken: string, integrationId: string, userId: string, supabaseClient: any): Promise<SyncResult> {
+    const result: SyncResult = { recordsProcessed: 0, recordsAdded: 0, recordsUpdated: 0 };
+    
+    try {
+      // Get Basecamp projects and messages
+      const projectsResponse = await fetch('https://3.basecampapi.com/accounts/projects.json', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'User-Agent': 'ClientTrust Dashboard (your-email@example.com)',
+        },
+      });
+
+      if (!projectsResponse.ok) {
+        throw new Error(`Basecamp API error: ${projectsResponse.status} ${projectsResponse.statusText}`);
+      }
+
+      const projects = await projectsResponse.json();
+
+      // Get user's clients for matching
+      const { data: clients } = await supabaseClient
+        .from('clients')
+        .select('id, name, email, company')
+        .eq('user_id', userId);
+
+      for (const project of projects || []) {
+        try {
+          // Match project to client by name or company
+          let clientId = this.findClientByProject(project, clients || []);
+
+          if (clientId) {
+            // Get project messages and events
+            const messagesResponse = await fetch(`https://3.basecampapi.com/${project.id}/buckets/${project.dock[0]?.id}/messages.json?limit=20`, {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'User-Agent': 'ClientTrust Dashboard (your-email@example.com)',
+              },
+            });
+
+            if (messagesResponse.ok) {
+              const messages = await messagesResponse.json();
+
+              for (const message of messages || []) {
+                // Check if activity already exists
+                const { data: existing } = await supabaseClient
+                  .from('external_activities')
+                  .select('id')
+                  .eq('integration_id', integrationId)
+                  .eq('external_id', message.id.toString())
+                  .single();
+
+                if (!existing) {
+                  await supabaseClient.from('external_activities').insert({
+                    client_id: clientId,
+                    integration_id: integrationId,
+                    external_id: message.id.toString(),
+                    activity_type: 'message',
+                    title: message.subject,
+                    description: message.excerpt || message.content,
+                    participants: [message.creator?.name].filter(Boolean),
+                    metadata: {
+                      messageId: message.id,
+                      projectId: project.id,
+                      projectName: project.name,
+                      messageUrl: message.app_url,
+                    },
+                    activity_date: new Date(message.created_at).toISOString(),
+                  });
+
+                  result.recordsAdded++;
+                }
+                result.recordsProcessed++;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error processing Basecamp project:', error);
+        }
+      }
+
+      return result;
+    } catch (error) {
+      return {
+        ...result,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  private findClientByProject(project: any, clients: any[]): string | null {
+    const projectName = project.name?.toLowerCase() || '';
+    
+    for (const client of clients) {
+      // Match by company name
+      if (client.company && projectName.includes(client.company.toLowerCase())) {
+        return client.id;
+      }
+      // Match by client name
+      if (client.name && projectName.includes(client.name.toLowerCase())) {
+        return client.id;
+      }
+      // Match by partial name matches
+      if (client.company) {
+        const companyWords = client.company.toLowerCase().split(' ');
+        if (companyWords.some(word => word.length > 3 && projectName.includes(word))) {
+          return client.id;
+        }
+      }
+    }
+    return null;
+  }
+}
+
 const SYNC_SERVICES: Record<string, SyncService> = {
   gmail: new GmailSyncService(),
   loom: new LoomSyncService(),
   fireflies: new FirefliesSyncService(),
+  basecamp: new BasecampSyncService(),
   // Add more services as needed
 };
 

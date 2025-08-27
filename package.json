@@ -9,7 +9,12 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "type-check": "tsc --noEmit"
+    "test:data-flow": "jest __tests__/data-flow.test.ts",
+    "type-check": "tsc --noEmit",
+    "validate-env": "node -e \"require('./src/lib/env-validation')\"",
+    "pre-commit": "npm run type-check && npm run test:data-flow && npm run lint",
+    "check-dummy-data": "grep -r \"5\\.2\\|2\\.1\\|12\\.3\" src/ --exclude-dir=node_modules || echo 'No dummy data found'",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.60.0",

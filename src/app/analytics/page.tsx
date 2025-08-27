@@ -107,25 +107,25 @@ export default function AnalyticsPage() {
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500">Avg Response Time</h3>
             <p className="text-2xl font-bold text-gray-900">{analyticsData.metrics.avgResponseTime}</p>
-            <p className="text-xs text-green-600 mt-1">↓ 12% from last month</p>
+            <p className="text-xs text-gray-500 mt-1">Based on recent data</p>
           </div>
           
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500">Client Satisfaction</h3>
             <p className="text-2xl font-bold text-gray-900">{analyticsData.metrics.clientSatisfaction}</p>
-            <p className="text-xs text-green-600 mt-1">↑ 3% from last month</p>
+            <p className="text-xs text-gray-500 mt-1">Based on communication sentiment</p>
           </div>
           
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500">Renewal Rate</h3>
             <p className="text-2xl font-bold text-gray-900">{analyticsData.metrics.renewalRate}</p>
-            <p className="text-xs text-green-600 mt-1">↑ 2% from last month</p>
+            <p className="text-xs text-gray-500 mt-1">Estimated from health scores</p>
           </div>
           
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500">Total Communications</h3>
             <p className="text-2xl font-bold text-gray-900">{analyticsData.metrics.totalCommunications.toLocaleString()}</p>
-            <p className="text-xs text-blue-600 mt-1">↑ 15% from last month</p>
+            <p className="text-xs text-gray-500 mt-1">All tracked interactions</p>
           </div>
         </div>
 

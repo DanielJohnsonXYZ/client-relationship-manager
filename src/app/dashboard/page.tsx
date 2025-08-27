@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { calculatePercentageChange } from '@/lib/validation';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { MetricCard } from '@/components/dashboard/metric-card';
 import { HealthTrendChart } from '@/components/dashboard/health-trend-chart';
@@ -15,6 +16,11 @@ interface DashboardData {
     atRiskClients: number;
     totalRevenue: number;
     averageHealthScore: number;
+    // Historical data for calculating real changes
+    previousTotalClients?: number;
+    previousHealthyClients?: number;
+    previousAtRiskClients?: number;
+    previousTotalRevenue?: number;
   };
   statusBreakdown: {
     active: number;
@@ -105,26 +111,42 @@ export default function DashboardPage() {
           <MetricCard
             title="Total Clients"
             value={data.overview.totalClients}
-            change={+5.2}
-            changeType="positive"
+            change={data.overview.previousTotalClients ? 
+              calculatePercentageChange(data.overview.totalClients, data.overview.previousTotalClients) : 0}
+            changeType={data.overview.previousTotalClients ? 
+              (data.overview.totalClients > data.overview.previousTotalClients ? "positive" : 
+               data.overview.totalClients < data.overview.previousTotalClients ? "negative" : "neutral") : "neutral"}
+            timePeriod="last 30 days"
           />
           <MetricCard
             title="Healthy Clients"
             value={data.overview.healthyClients}
-            change={+2.1}
-            changeType="positive"
+            change={data.overview.previousHealthyClients ? 
+              calculatePercentageChange(data.overview.healthyClients, data.overview.previousHealthyClients) : 0}
+            changeType={data.overview.previousHealthyClients ? 
+              (data.overview.healthyClients > data.overview.previousHealthyClients ? "positive" : 
+               data.overview.healthyClients < data.overview.previousHealthyClients ? "negative" : "neutral") : "neutral"}
+            timePeriod="last 30 days"
           />
           <MetricCard
             title="At Risk"
             value={data.overview.atRiskClients}
-            change={-1.3}
-            changeType="negative"
+            change={data.overview.previousAtRiskClients ? 
+              calculatePercentageChange(data.overview.atRiskClients, data.overview.previousAtRiskClients) : 0}
+            changeType={data.overview.previousAtRiskClients ? 
+              (data.overview.atRiskClients < data.overview.previousAtRiskClients ? "positive" : 
+               data.overview.atRiskClients > data.overview.previousAtRiskClients ? "negative" : "neutral") : "neutral"}
+            timePeriod="last 30 days"
           />
           <MetricCard
             title="Total Revenue"
             value={`$${data.overview.totalRevenue.toLocaleString()}`}
-            change={+12.3}
-            changeType="positive"
+            change={data.overview.previousTotalRevenue ? 
+              calculatePercentageChange(data.overview.totalRevenue, data.overview.previousTotalRevenue) : 0}
+            changeType={data.overview.previousTotalRevenue ? 
+              (data.overview.totalRevenue > data.overview.previousTotalRevenue ? "positive" : 
+               data.overview.totalRevenue < data.overview.previousTotalRevenue ? "negative" : "neutral") : "neutral"}
+            timePeriod="last 30 days"
           />
         </div>
 

@@ -115,6 +115,13 @@ const OAUTH_CONFIGS = {
     clientId: process.env.ZOOM_CLIENT_ID,
     clientSecret: process.env.ZOOM_CLIENT_SECRET,
   },
+  basecamp: {
+    authUrl: 'https://launchpad.37signals.com/authorization/new',
+    tokenUrl: 'https://launchpad.37signals.com/authorization/token',
+    scopes: ['read'],
+    clientId: process.env.BASECAMP_CLIENT_ID,
+    clientSecret: process.env.BASECAMP_CLIENT_SECRET,
+  },
 };
 
 export async function GET(
@@ -141,6 +148,12 @@ export async function GET(
       // Validate OAuth credentials are configured
       if (!config.clientId || !config.clientSecret) {
         return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/settings?integration_error=oauth_not_configured`);
+      }
+
+      // Validate APP_URL is configured
+      if (!process.env.NEXT_PUBLIC_APP_URL) {
+        console.error('NEXT_PUBLIC_APP_URL environment variable is not set');
+        return NextResponse.redirect('/settings?integration_error=app_url_not_configured');
       }
 
       // Step 1: Redirect to OAuth provider

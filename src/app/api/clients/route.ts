@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { calculateClientHealthScore } from '@/lib/health-calculator';
 
 export async function GET(request: NextRequest) {
   try {
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
           company: 'Spark Shipping Inc',
           phone: '+1-555-SPARK',
           status: 'active',
-          health_score: 88,
+          health_score: 0, // Will be calculated after client creation
           total_revenue: 45000.00,
           last_contact_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
           next_follow_up: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -127,6 +128,18 @@ export async function POST(request: NextRequest) {
         status: 'active',
       });
 
+      // Calculate and update health score
+      try {
+        const healthData = await calculateClientHealthScore(sparkClient.id, user.id);
+        await supabase
+          .from('clients')
+          .update({ health_score: healthData.health_score })
+          .eq('id', sparkClient.id);
+        sparkClient.health_score = healthData.health_score;
+      } catch (error) {
+        console.error('Failed to calculate health score for Spark Shipping:', error);
+      }
+
       return NextResponse.json({ 
         success: true,
         message: 'Spark Shipping created successfully!',
@@ -155,7 +168,7 @@ export async function POST(request: NextRequest) {
           notes,
           tags,
           status: 'active',
-          health_score: 70, // Default health score
+          health_score: 0, // Will be calculated after client creation
         },
       ])
       .select()
@@ -163,6 +176,18 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Calculate and update health score
+    try {
+      const healthData = await calculateClientHealthScore(client.id, user.id);
+      await supabase
+        .from('clients')
+        .update({ health_score: healthData.health_score })
+        .eq('id', client.id);
+      client.health_score = healthData.health_score;
+    } catch (error) {
+      console.error('Failed to calculate health score for new client:', error);
     }
 
     return NextResponse.json({ client }, { status: 201 });

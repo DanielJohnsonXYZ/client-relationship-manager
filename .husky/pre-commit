@@ -1,4 +1,23 @@
-#!/usr/bin/env sh
+#\!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npx lint-staged
+echo "🔍 Running pre-commit checks..."
+
+# Run type checking
+echo "  📝 Type checking..."
+npm run type-check
+
+# Run dummy data detection tests
+echo "  🚫 Checking for dummy data..."
+npm run test:data-flow
+
+# Check for known dummy values in codebase
+echo "  🔍 Scanning for hardcoded dummy values..."
+npm run check-dummy-data
+
+# Run linting
+echo "  ✨ Linting code..."
+npm run lint
+
+echo "✅ Pre-commit checks passed\!"
+EOF < /dev/null

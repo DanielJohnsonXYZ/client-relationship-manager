@@ -34,7 +34,7 @@ export function ClientModal({ client, onSave, onClose }: ClientModalProps) {
     company: '',
     phone: '',
     status: 'active' as 'active' | 'inactive' | 'at_risk' | 'churned',
-    health_score: 70,
+    health_score: 0, // Will be calculated dynamically
     total_revenue: 0,
     next_follow_up: '',
     notes: '',
@@ -154,16 +154,10 @@ export function ClientModal({ client, onSave, onClose }: ClientModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="health_score">Health Score (0-100)</Label>
-              <Input
-                id="health_score"
-                name="health_score"
-                type="number"
-                min="0"
-                max="100"
-                value={formData.health_score}
-                onChange={handleChange}
-              />
+              <Label htmlFor="health_score">Health Score</Label>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
+                Calculated automatically based on interactions
+              </div>
             </div>
 
             <div className="space-y-2">

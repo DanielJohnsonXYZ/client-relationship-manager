@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get dashboard metrics
-    const [clientsResult, alertsResult, communicationsResult] = await Promise.all([
+    const [clientsResult, alertsResult, communicationsResult, historicalClientsResult] = await Promise.all([
       // Clients overview
       supabase
         .from('clients')
@@ -36,10 +36,17 @@ export async function GET(request: NextRequest) {
         .eq('user_id', user.id)
         .gte('communication_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
         .order('communication_date', { ascending: false })
-        .limit(100)
+        .limit(100),
+      
+      // Historical clients data (30 days ago for comparison)
+      supabase
+        .from('clients')
+        .select('status, health_score, total_revenue, created_at')
+        .eq('user_id', user.id)
+        .lt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     ]);
 
-    if (clientsResult.error || alertsResult.error || communicationsResult.error) {
+    if (clientsResult.error || alertsResult.error || communicationsResult.error || historicalClientsResult.error) {
       return NextResponse.json(
         { error: 'Failed to fetch dashboard data' },
         { status: 500 }
@@ -49,12 +56,19 @@ export async function GET(request: NextRequest) {
     const clients = clientsResult.data || [];
     const alerts = alertsResult.data || [];
     const communications = communicationsResult.data || [];
+    const historicalClients = historicalClientsResult.data || [];
 
-    // Calculate metrics
+    // Calculate current metrics
     const totalClients = clients.length;
     const healthyClients = clients.filter(c => c.health_score >= 70).length;
     const atRiskClients = clients.filter(c => c.health_score < 50).length;
     const totalRevenue = clients.reduce((sum, c) => sum + (c.total_revenue || 0), 0);
+    
+    // Calculate historical metrics for comparison
+    const previousTotalClients = historicalClients.length;
+    const previousHealthyClients = historicalClients.filter(c => c.health_score >= 70).length;
+    const previousAtRiskClients = historicalClients.filter(c => c.health_score < 50).length;
+    const previousTotalRevenue = historicalClients.reduce((sum, c) => sum + (c.total_revenue || 0), 0);
     
     const averageHealthScore = totalClients > 0 
       ? clients.reduce((sum, c) => sum + c.health_score, 0) / totalClients 
@@ -96,6 +110,11 @@ export async function GET(request: NextRequest) {
         atRiskClients,
         totalRevenue,
         averageHealthScore,
+        // Historical data for calculating real percentage changes
+        previousTotalClients,
+        previousHealthyClients,
+        previousAtRiskClients,
+        previousTotalRevenue,
       },
       statusBreakdown,
       alertBreakdown,

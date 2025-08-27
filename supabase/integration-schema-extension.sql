@@ -7,7 +7,7 @@ DROP CONSTRAINT IF EXISTS integrations_type_check;
 
 ALTER TABLE public.integrations 
 ADD CONSTRAINT integrations_type_check 
-CHECK (type IN ('gmail', 'slack', 'zoom', 'calendly', 'stripe', 'loom', 'fireflies', 'teams', 'hubspot', 'salesforce'));
+CHECK (type IN ('gmail', 'slack', 'zoom', 'calendly', 'stripe', 'loom', 'fireflies', 'teams', 'hubspot', 'salesforce', 'basecamp'));
 
 -- Add OAuth tokens table for secure token storage
 CREATE TABLE public.integration_tokens (

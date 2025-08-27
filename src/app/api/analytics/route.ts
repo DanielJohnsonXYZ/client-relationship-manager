@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { calculateAverageResponseTime } from '@/lib/validation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -133,8 +134,8 @@ export async function GET(request: NextRequest) {
     const avgHealthScore = healthData?.reduce((acc, client) => acc + (client.health_score || 0), 0) / (healthData?.length || 1);
     const renewalRate = Math.min(100, Math.round(avgHealthScore * 1.2)); // Estimated based on health score
 
-    // Calculate average response time (mock for now, would need actual response time tracking)
-    const avgResponseTime = totalCommunications > 10 ? '2.1 hours' : totalCommunications > 5 ? '3.2 hours' : '4.5 hours';
+    // Calculate average response time from actual communication data
+    const avgResponseTime = calculateAverageResponseTime(communicationsData || []);
 
     const analyticsData = {
       revenue: {
