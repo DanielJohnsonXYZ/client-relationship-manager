@@ -114,17 +114,17 @@ async function processData(userId: string, data: any[], dataType?: string) {
           
           const { error } = await supabaseAdmin
             .from('communications')
-            .insert([{
+            .insert({
               client_id: clientId,
               user_id: userId,
               type: determineType(item),
               subject: extractSubject(item),
               content: content,
-              direction: 'inbound',
+              direction: 'inbound' as 'inbound',
               sentiment_score: sentiment.score,
-              sentiment_label: sentiment.label,
+              sentiment_label: sentiment.label as 'positive' | 'neutral' | 'negative',
               communication_date: item.timestamp || item.date || new Date().toISOString()
-            }]);
+            });
             
           if (!error) {
             results.communications_created++;
